@@ -1,50 +1,31 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Linux Bluetooth HCI device drivers.
-#
+SHELL := /bin/sh
+FW_DIR	:= /lib/firmware/rtl_bt/
+MDL_DIR	:= /lib/modules/$(shell uname -r)
+DRV_DIR	:= $(MDL_DIR)/kernel/drivers/bluetooth
+EXTRA_CFLAGS += -DCONFIG_BT_RTL
 
-obj-$(CONFIG_BT_HCIVHCI)	+= hci_vhci.o
-obj-$(CONFIG_BT_HCIUART)	+= hci_uart.o
-obj-$(CONFIG_BT_HCIBCM203X)	+= bcm203x.o
-obj-$(CONFIG_BT_HCIBPA10X)	+= bpa10x.o
-obj-$(CONFIG_BT_HCIBFUSB)	+= bfusb.o
-obj-$(CONFIG_BT_HCIDTL1)	+= dtl1_cs.o
-obj-$(CONFIG_BT_HCIBT3C)	+= bt3c_cs.o
-obj-$(CONFIG_BT_HCIBLUECARD)	+= bluecard_cs.o
+ifneq ($(KERNELRELEASE),)
 
-obj-$(CONFIG_BT_HCIBTUSB)	+= btusb.o
-obj-$(CONFIG_BT_HCIBTSDIO)	+= btsdio.o
+	obj-m := btusb.o btrtl.o btintel.o btbcm.o
 
-obj-$(CONFIG_BT_INTEL)		+= btintel.o
-obj-$(CONFIG_BT_ATH3K)		+= ath3k.o
-obj-$(CONFIG_BT_MRVL)		+= btmrvl.o
-obj-$(CONFIG_BT_MRVL_SDIO)	+= btmrvl_sdio.o
-obj-$(CONFIG_BT_MTKSDIO)	+= btmtksdio.o
-obj-$(CONFIG_BT_MTKUART)	+= btmtkuart.o
-obj-$(CONFIG_BT_QCOMSMD)	+= btqcomsmd.o
-obj-$(CONFIG_BT_BCM)		+= btbcm.o
-obj-$(CONFIG_BT_RTL)		+= btrtl.o
-obj-$(CONFIG_BT_QCA)		+= btqca.o
+else
+	PWD := $(shell pwd)
+	KVER := $(shell uname -r)
+	KDIR := /lib/modules/$(KVER)/build
 
-obj-$(CONFIG_BT_VIRTIO)		+= virtio_bt.o
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
-obj-$(CONFIG_BT_HCIUART_NOKIA)	+= hci_nokia.o
+clean:
+	rm -rf *.o *.mod.c *.mod.o *.ko *.symvers *.order *.a *.mod
+endif
 
-obj-$(CONFIG_BT_HCIRSI)		+= btrsi.o
+install:
+	@cp -f *.ko $(DRV_DIR)/.
+	@depmod -a
+	@echo "installed revised btusb"
 
-btmrvl-y			:= btmrvl_main.o
-btmrvl-$(CONFIG_DEBUG_FS)	+= btmrvl_debugfs.o
-
-hci_uart-y				:= hci_ldisc.o
-hci_uart-$(CONFIG_BT_HCIUART_SERDEV)	+= hci_serdev.o
-hci_uart-$(CONFIG_BT_HCIUART_H4)	+= hci_h4.o
-hci_uart-$(CONFIG_BT_HCIUART_BCSP)	+= hci_bcsp.o
-hci_uart-$(CONFIG_BT_HCIUART_LL)	+= hci_ll.o
-hci_uart-$(CONFIG_BT_HCIUART_ATH3K)	+= hci_ath.o
-hci_uart-$(CONFIG_BT_HCIUART_3WIRE)	+= hci_h5.o
-hci_uart-$(CONFIG_BT_HCIUART_INTEL)	+= hci_intel.o
-hci_uart-$(CONFIG_BT_HCIUART_BCM)	+= hci_bcm.o
-hci_uart-$(CONFIG_BT_HCIUART_QCA)	+= hci_qca.o
-hci_uart-$(CONFIG_BT_HCIUART_AG6XX)	+= hci_ag6xx.o
-hci_uart-$(CONFIG_BT_HCIUART_MRVL)	+= hci_mrvl.o
-hci_uart-objs				:= $(hci_uart-y)
+uninstall:
+	rm -f $(DRV_DIR)/btusb.ko*
+	depmod -a $(MDL_DIR)
+	echo "uninstalled revised btusb"
